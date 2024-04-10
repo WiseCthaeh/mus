@@ -84,6 +84,7 @@ class Game:
     def __init__(self):
         self.deck = Deck()
         self.discard_pile = DiscardPile()
+        self.betting_system = BettingSystem()
         self.players = [Player(), Player(), Player(), Player()]
 
         # deal cards
