@@ -84,10 +84,7 @@ class Game:
     def __init__(self):
         self.deck = Deck()
         self.discard_pile = DiscardPile()
-        self.player1 = Player()
-        self.player2 = Player()
-        self.player3 = Player()
-        self.player4 = Player()
+        self.players = [Player(), Player(), Player(), Player()]
 
         # deal cards
         self.deal()
@@ -105,10 +102,7 @@ class Game:
     def reset(self):
         self.deck = Deck()
         self.discard_pile = DiscardPile()
-        self.player1 = Player()
-        self.player2 = Player()
-        self.player3 = Player()
-        self.player4 = Player()
+        self.players = [Player(), Player(), Player(), Player()]
 
         # deal cards
         self.deal()
@@ -123,22 +117,16 @@ class Game:
 
     def deal(self):
         for _ in range(4):
-            self.player1.draw(self.deck.draw_card())
-            self.player2.draw(self.deck.draw_card())
-            self.player3.draw(self.deck.draw_card())
-            self.player4.draw(self.deck.draw_card())
+            for player in self.players:
+                player.draw(self.deck.draw_card())
 
     def count_points(self):
-        self.player1.count_points()
-        self.player2.count_points()
-        self.player3.count_points()
-        self.player4.count_points()
+        for player in self.players:
+            player.count_points()
 
     def count_pairs(self):
-        self.player1.pairs = self.player1.count_pairs()
-        self.player2.pairs = self.player2.count_pairs()
-        self.player3.pairs = self.player3.count_pairs()
-        self.player4.pairs = self.player4.count_pairs()
+        for player in self.players:
+            player.count_pairs()
 
     def discard(self, player, card):
         player.hand.remove(card)
@@ -149,15 +137,8 @@ class Game:
             self.discard(player, card)
             player.draw(self.deck.draw_card())
 
-        self.player1.count_points()
-        self.player2.count_points()
-        self.player3.count_points()
-        self.player4.count_points()
-
-        self.player1.count_pairs()
-        self.player2.count_pairs()
-        self.player3.count_pairs()
-        self.player4.count_pairs()
+        self.count_pairs()
+        self.count_points()
 
     def play(self):
         print("Still developing...")
