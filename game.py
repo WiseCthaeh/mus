@@ -1,7 +1,6 @@
 import random
 
 
-
 class DiscardPile:
     def __init__(self):
         self.cards = []
