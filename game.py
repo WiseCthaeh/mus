@@ -50,6 +50,35 @@ class Player:
                 pairs += 1
         return pairs
     
+class BettingSystem:
+    def __init__(self):
+        self.pot = 0
+        self.bet = 0
+        self.better = None
+        self.caller = None
+
+    def bet(self, player, amount):
+        if amount < 0:
+            raise ValueError("Minimum bet is 2")
+        self.better = player
+        self.bet = amount
+
+    def call(self, player):
+        if player == self.better:
+            raise ValueError("You can't call your own bet")
+        self.caller = player
+
+    def raise_bet(self, player, amount):
+        if amount < self.bet + 2:
+            raise ValueError("Minimum raise is 2 above previous bet")
+        self.better = player
+        self.bet, self.pot = amount, self.bet
+
+    def fold(self, player):
+        if player == self.better:
+            raise ValueError("You can't fold your own bet")
+        self.pot = max(self.pot, 1)   # in case it is still 0
+
 
 class Game:
     def __init__(self):
