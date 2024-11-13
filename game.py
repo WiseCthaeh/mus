@@ -62,6 +62,27 @@ class Player():
             self.has_juego = False
         self.juego = sum(self.juego_values[card.rank] for card in self.hand)
 
+    def player_promt(self, bet_made, betting_team, current_bet):
+        # This should return action, current_bet
+        options = ['pass', 'bet', 'fold', 'call']
+        if bet_made==False:
+            options.remove('fold')
+            options.remove('call')
+
+        if current_bet != 0 or bet_made:
+            options.remove('pass')
+
+        action = input(f"{self.name} {self.show_hand()} choice of options = {options}| bet: {bet_made} current bet: {current_bet} ")
+        if action =='pass':
+            return action, current_bet
+        if action == 'call':
+            return action, current_bet
+        if action == 'bet':
+            current_bet = input(f"Place a bet")
+            return action, current_bet
+        if action == 'fold':
+            return action, current_bet
+
 class Card():
     def __init__(self, rank) -> None:
         self.rank = rank
@@ -100,24 +121,87 @@ class Game():
     def betting_round(self, stage):
         print(f"\n--- Betting Round: {stage} ---")
         bet_made = False
-        winning_team = None
+        betting_team = None
+        betting_settled = False
         current_bet = 0
         pot = 0
+        active_players = self.players
+
         if stage=='pares':
-            pass
+            active_players = [player for player in self.players if player.has_pares]
+            for player in active_players:
+                print(player.name, player.has_pares)
+            if len(active_players)>=2:
+                if all(player.team=='team1' for player in active_players):
+                    # This is the case for only one team having pairs
+                    return bet_made, 'team1', 0
+                if all(player.team=='team2' for player in active_players):
+                    # This is the case for only one team having pairs
+                    return bet_made, 'team2', 0
+            else:
+                print('No pairs or sufficient players for betting allowed')
+                return bet_made, betting_team, current_bet
+
         if stage=='juego':
-            pass
+            active_players = [player for player in self.players if player.has_juego]
+            for player in active_players:
+                print(player.name, player.has_juego)
+            if len(active_players)>=2:
+                if all(player.team=='team1' for player in active_players):
+                    return bet_made, 'team1', 0
+                if all(player.team=='team2' for player in active_players):
+                    return bet_made, 'team2', 0
+            if len(active_players)==1:
+                return bet_made, active_players[0].team, current_bet
+            else:
+                active_players = self.players
+                print('No one has juego, proceed to bet towards punto')
 
-        # Start with the player who is Mano and proceed clockwise
-        current_player_index = self.mano_index
-        for i, player in enumerate(self.players):
+        for i, player in enumerate(active_players):
+            action, bet_amount = player.player_promt(bet_made, betting_team, current_bet)
+            if action == 'pass':
+                if i==len(active_players)-1:
+                    print("If no bets are placed by the last player, the round is left al paso")
+                    return bet_made, betting_team, current_bet
+                else:
+                    continue
+            if action =='bet':
+                current_bet = bet_amount
+                betting_team = player.team
+                pot += int(bet_amount)
+                bet_made = True
+                betting_settled = False
+                
+        
+            if bet_made:
+                while betting_settled==False:
+                    respond_players = [player for player in active_players if player.team!=betting_team]
+                    for j, player in enumerate(respond_players):
+                        action, bet_amount = player.player_promt(bet_made, betting_team, pot)
+                        if action=='fold':
+                            # print('player chose fold')
+                            if j ==len(respond_players)-1:
+                                # print('final fold')
+                                if pot==2:
+                                    return bet_made, betting_team, 1
+                                    # This is when envido is not seen, opposit team wins 1
+                                else: 
+                                    return bet_made, betting_team, pot - current_bet
+                            else:
+                                # This continue is so that the other team player can go
+                                continue
+                        if action=='call':
+                            betting_settled=True
+                            return bet_made, None, current_bet
+                        if action=='bet':
+                            current_bet = int(bet_amount)
+                            pot += current_bet
+                            betting_team = player.team
+                            break
 
-            if i==3:
-                if bet_made == False:
 
-                    "If no bets are 3placed by the last player, the round is left al paso"
-                    raise NotImplementedError
-    
+
+ 
     def evalute_winner(self, stage, bet_made, winning_team, current_bet):
         if winning_team == None:
         # These two lines deal with either an accepted bet or a stage that is not bet on,
@@ -139,15 +223,16 @@ class Game():
     def play_round(self):
         self.deck.shuffle()
         self.deal_players()
-        # self.offer_mus()
-        # for player in self.players:
-        #     print(player.show_hand())
+        for player in game.players:
+            print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
 
         stages = ['grande', 'chica', 'pares', 'juego']
         stage_data =[]
         for stage in stages:
             bet_made, winning_team, current_bet = self.betting_round(stage)
-            self.evalute_winner(bet_made, winning_team, current_bet)
+            print(stage, bet_made, winning_team, current_bet)
+            # self.evalute_winner(bet_made, winning_team, current_bet)
+
 
     def play_game(self):
         self.play_round()
@@ -155,6 +240,4 @@ class Game():
 team1_names = ["A", "C"]
 team2_names = ["B", "D"]
 game = Game(team1_names, team2_names)
-# game.play_game()
-for player in game.players:
-    print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
+game.play_game()
