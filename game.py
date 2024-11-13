@@ -118,6 +118,21 @@ class Game():
                     "If no bets are 3placed by the last player, the round is left al paso"
                     raise NotImplementedError
     
+    def evalute_winner(self, stage, bet_made, winning_team, current_bet):
+        if winning_team == None:
+        # These two lines deal with either an accepted bet or a stage that is not bet on,
+        # Both scenarios
+            if bet_made != 0:
+                print('Compute which team wins the bet')
+                pass
+            else:
+                print('Compute which team wins (was left al paso)')
+                pass
+        else:
+            # Here a team has won the round, compute points and add to team scores
+            pass
+            #
+
     def offer_mus(self):
         raise NotImplementedError
     
@@ -132,19 +147,7 @@ class Game():
         stage_data =[]
         for stage in stages:
             bet_made, winning_team, current_bet = self.betting_round(stage)
-            if winning_team == None:
-            # These two lines deal with either an accepted bet or a stage that is not bet on,
-            # Both scenarios
-                if bet_made != 0:
-                    print('Compute which team wins the bet')
-                    pass
-                else:
-                    print('Compute which team wins (was left al paso)')
-                    pass
-            else:
-                # Here a team has won the round, compute points and add to team scores
-                pass
-                #
+            self.evalute_winner(bet_made, winning_team, current_bet)
 
     def play_game(self):
         self.play_round()
