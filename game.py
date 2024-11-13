@@ -192,7 +192,7 @@ class Game():
                                 continue
                         if action=='call':
                             betting_settled=True
-                            return bet_made, None, current_bet
+                            return bet_made, None, pot + current_bet
                         if action=='bet':
                             current_bet = int(bet_amount)
                             pot += current_bet
