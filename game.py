@@ -166,7 +166,7 @@ class Game():
                 else:
                     continue
             if action =='bet':
-                current_bet = bet_amount
+                current_bet = int(bet_amount)
                 betting_team = player.team
                 pot += int(bet_amount)
                 bet_made = True
@@ -182,11 +182,11 @@ class Game():
                             # print('player chose fold')
                             if j ==len(respond_players)-1:
                                 # print('final fold')
-                                if pot==2:
+                                if pot==current_bet:
                                     return bet_made, betting_team, 1
                                     # This is when envido is not seen, opposit team wins 1
                                 else: 
-                                    return bet_made, betting_team, pot - current_bet
+                                    return bet_made, betting_team, pot - int(current_bet)
                             else:
                                 # This continue is so that the other team player can go
                                 continue
