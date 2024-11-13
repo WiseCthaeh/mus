@@ -226,6 +226,7 @@ class Game():
         for player in game.players:
             print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
 
+        # This is where self.offermus() goes
         stages = ['grande', 'chica', 'pares', 'juego']
         stage_data =[]
         for stage in stages:
