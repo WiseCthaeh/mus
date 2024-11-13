@@ -141,4 +141,5 @@ class Game:
         self.count_points()
 
     def play(self):
+        print("Marcos is best")
         print("Still developing...")
