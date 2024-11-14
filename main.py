@@ -2,8 +2,10 @@ from game import Game
 
 
 def main():
-    game = Game()
-    game.play()
+    team1_names = ["A", "C"]
+    team2_names = ["B", "D"]
+    g = Game(team1_names, team2_names)
+    g.play_game()
 
 
 if __name__ == '__main__':

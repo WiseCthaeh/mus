@@ -43,11 +43,16 @@ class Player():
     def draw(self, card):
         self.hand.append(card)
     
+    def discard(self, index):
+        return(self.hand.pop(index))
+    
     def sort_hand(self):
         # Sort the hand based on the value in `sort_hand_values`
         self.hand.sort(key=lambda card: self.sort_hand_values[card.rank])
     
     def check_pares(self):
+        self.pares = ''
+        self.pares_strength = 0
         for card in self.show_hand():
             if self.show_hand().count(card) >= 2:
                 self.has_pares = True
@@ -125,10 +130,11 @@ class Game():
         betting_settled = False
         current_bet = 0
         pot = 0
-        active_players = self.players
+        active_players = self.players[self.mano_index:] + self.players[:self.mano_index]
+
 
         if stage=='pares':
-            active_players = [player for player in self.players if player.has_pares]
+            active_players = [player for player in active_players if player.has_pares]
             for player in active_players:
                 print(player.name, player.has_pares)
             if len(active_players)>=2:
@@ -143,7 +149,7 @@ class Game():
                 return bet_made, betting_team, current_bet
 
         if stage=='juego':
-            active_players = [player for player in self.players if player.has_juego]
+            active_players = [player for player in active_players if player.has_juego]
             for player in active_players:
                 print(player.name, player.has_juego)
             if len(active_players)>=2:
@@ -153,9 +159,10 @@ class Game():
                     return bet_made, 'team2', 0
             if len(active_players)==1:
                 return bet_made, active_players[0].team, current_bet
-            else:
-                active_players = self.players
+            if len(active_players)==0:
+                active_players = self.players[self.mano_index:] + self.players[:self.mano_index]
                 print('No one has juego, proceed to bet towards punto')
+
 
         for i, player in enumerate(active_players):
             action, bet_amount = player.player_promt(bet_made, betting_team, current_bet)
@@ -201,7 +208,6 @@ class Game():
 
 
 
- 
     def evalute_winner(self, stage, bet_made, winning_team, current_bet):
         if winning_team == None:
         # These two lines deal with either an accepted bet or a stage that is not bet on,
@@ -218,27 +224,81 @@ class Game():
             #
 
     def offer_mus(self):
-        raise NotImplementedError
+        mus_order_players = [self.players[(0+self.mano_index)%4], 
+                             self.players[(2+self.mano_index)%4], 
+                             self.players[(1+self.mano_index)%4], 
+                             self.players[(3+self.mano_index)%4]]
+        
+        all_agree = all(input(f"{player.name}, do you want Mus? {player.show_hand()} (yes/no): ").strip().lower() == "yes"
+                for player in mus_order_players)
+        
+        while all_agree:
+            discard_pile = Deck(full=False)
+            player_discards = []
+            discard_amount = 0
+            for player in self.players[self.mano_index:] + self.players[:self.mano_index]:
+                print(f"{player.name}'s hand: {player.show_hand()}")
+                discard_input = input(f"{player.name}, enter card positions to discard (1-4)").split(',')
+                if len(discard_input)>1:
+                    discard_amount += len(discard_input)
+                    player_discards.append(sorted(discard_input,reverse=True))
+                else:
+                    discard_amount += 1
+                    player_discards.append(discard_input)
+            if discard_amount>len(self.deck):
+                self.deck = discard_pile
+                print("There are not enough cards to give out, shuffling discard")
+                self.deck.shuffle()
+            for i, player in enumerate(self.players[self.mano_index:] + self.players[:self.mano_index]):
+                for dis in player_discards[i]:
+                    discard_pile.append(player.discard(int(dis)-1))
+                    # print(player.name,player.show_hand()[dis])
+                self.deal(player,len(player_discards[i]))
+                player.sort_hand()
+                player.check_pares()
+                player.check_juego()
+            self.game_info()
+            all_agree = all(input(f"{player.name}, do you want another Mus? {player.show_hand()} (yes/no): ").strip().lower() == "yes"
+                            for player in mus_order_players)
     
+    def game_info(self):
+        for player in self.players:
+            print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
+
+    def rotate_mano(self):
+        self.mano_index = (self.mano_index + 1)%4
+
     def play_round(self):
         self.deck.shuffle()
         self.deal_players()
-        for player in game.players:
-            print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
-
+        self.game_info()
         # This is where self.offermus() goes
+        self.offer_mus()
         stages = ['grande', 'chica', 'pares', 'juego']
-        stage_data =[]
+        stages_log = []
         for stage in stages:
+            stage_data = []
             bet_made, winning_team, current_bet = self.betting_round(stage)
             print(stage, bet_made, winning_team, current_bet)
-            # self.evalute_winner(bet_made, winning_team, current_bet)
 
+
+            
+            # self.evalute_winner(bet_made, winning_team, current_bet)
+        self.clear_round()
+        self.rotate_mano()
+
+    def clear_round(self):
+        for player in self.players:
+            player.hand = []
+            player.is_mano = False
+            player.has_pares = False
+            player.has_juego = False
+            player.pares = ''
+            player.pares_strength = 0
+            player.juego = 0
+        self.deck = Deck(full=True)
 
     def play_game(self):
         self.play_round()
+        self.play_round()
 
-team1_names = ["A", "C"]
-team2_names = ["B", "D"]
-game = Game(team1_names, team2_names)
-game.play_game()
