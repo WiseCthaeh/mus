@@ -269,8 +269,12 @@ class Game():
             bet_made, winning_team, current_bet = self.betting_round(stage)
             if winning_team is None:
                 if bet_made is False:
-                    winning_team = self.find_winner(stage)
-                    current_bet = 1
+                    if stage=='pares' and len([player for player in self.players if player.has_pares])==0:
+                        print('No one has pares, so not computing winners')
+                        continue
+                    else:
+                        winning_team = self.find_winner(stage)
+                        current_bet = 1
                 else:
                     winning_team = self.find_winner(stage)
                 self.compute_points(stage, winning_team, current_bet)
@@ -417,13 +421,12 @@ class Game():
                 else:
                     print("No player with a valid 'punto' hand found")
                     return None
-            
+
             # This is for computing who is the strongest juego
             else:
-                juego_priority = [JUEGO_PUNTOS.keys()]
+                juego_priority = list(JUEGO_PUNTOS.keys())
                 best_player = None
-                best_juego_value = -1  # Initialize to a low value
-                best_juego_priority = float('inf')  # Initialize to a high priority (31 is best)
+                best_priority_index = float('inf')  # Initialize to a high priority (31 is best)
 
                 num_players = len(self.players)
 
@@ -435,25 +438,27 @@ class Game():
                     hand_total = player.juego
 
                     # Only consider hands of 31 or more
-                    if hand_total >= 31 and hand_total in juego_priority:
-                        # Determine the priority of this "juego" value
-                        current_priority = juego_priority.index(hand_total)
+                    if hand_total >= 31:
+                        # Check if the hand total exists in the priority list
+                        if hand_total in juego_priority:
+                            # Determine the priority index of this "juego" value
+                            current_priority_index = juego_priority.index(hand_total)
 
-                        # Compare with the current best priority
-                        if current_priority < best_juego_priority:
-                            best_juego_priority = current_priority
-                            best_juego_value = hand_total
-                            best_player = player
-                        elif current_priority == best_juego_priority:
-                            # Tie-breaking: player closest to "mano" wins
-                            current_best_distance = (self.players.index(best_player) - self.mano_index) % num_players
-                            current_player_distance = i
-                            if current_player_distance < current_best_distance:
+                            # Compare with the current best priority index
+                            if current_priority_index < best_priority_index:
+                                # New best hand found, update best priority and player
+                                best_priority_index = current_priority_index
                                 best_player = player
+                            elif current_priority_index == best_priority_index:
+                                # Tie-breaking: player closest to "mano" wins
+                                current_best_distance = (self.players.index(best_player) - self.mano_index) % num_players
+                                current_player_distance = i
+                                if current_player_distance < current_best_distance:
+                                    best_player = player
 
                 # Return the team of the player with the best "juego" hand
                 if best_player:
-                    print(f"The best 'juego' hand belongs to {best_player.name} from team {best_player.team} with a total of {best_juego_value}")
+                    print(f"The best 'juego' hand belongs to {best_player.name} from team {best_player.team}")
                     winning_team = best_player.team
 
         return winning_team
