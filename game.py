@@ -114,10 +114,12 @@ class Game():
         self.round = 1
 
     def deal(self, player,n=1):
+        # This function is used for when a player is in mus stage
         for _ in range(n):
             player.draw(self.deck.pop())
 
     def deal_players(self):
+        # Function used to deal players at the beginning of the game, sorting and checking hand values
         for player in self.players:
             self.deal(player,n=4)
             player.sort_hand()
@@ -132,7 +134,10 @@ class Game():
         current_bet = 0
         pot = 0
         active_players = self.players[self.mano_index:] + self.players[:self.mano_index]
-
+        
+        # The next two lines are to determine the active players in each stage, for pares and
+        # juego, only if more than two of opposite team players does the betting proceed, otherwise
+        # the winner is given by the player that can participate
 
         if stage=='pares':
             active_players = [player for player in active_players if player.has_pares]
@@ -164,7 +169,13 @@ class Game():
                 active_players = self.players[self.mano_index:] + self.players[:self.mano_index]
                 print('No one has juego, proceed to bet towards punto')
 
-
+        # This is the big logic tree, it starts by going through the players, assuming no
+        # bets have been placed as players have the option to pass or bet. Then, once a player
+        # makes a bet it triggers the var betting_made to True, going into a while loop that
+        # asks opposite team players for decisions (call - settling bet to True, bet - triggering
+        # the while loop or fold, where if two folds (or 1 if only one valid opposite player team) then
+        # the bet is settled and the loop exits). Meanwhile, the function variables inside the loop bet_made
+        # of pot, current bet are used to keep track of gained (accepted) or loss (up to current bet) points
         for i, player in enumerate(active_players):
             action, bet_amount = player.player_promt(bet_made, betting_team, current_bet)
             if action == 'pass':
@@ -184,6 +195,7 @@ class Game():
             if bet_made:
                 while betting_settled==False:
                     respond_players = [player for player in active_players if player.team!=betting_team]
+                    # This loop triggers the active players for the opposite team
                     for j, player in enumerate(respond_players):
                         action, bet_amount = player.player_promt(bet_made, betting_team, pot)
                         if action=='fold':
@@ -196,7 +208,7 @@ class Game():
                                 else: 
                                     return bet_made, betting_team, pot - int(current_bet)
                             else:
-                                # This continue is so that the other team player can go
+                            # This continue is so that the other team player can go and check for second fold
                                 continue
                         if action=='call':
                             betting_settled=True
@@ -497,4 +509,4 @@ class Game():
     def play_game(self):
         while self.team_scores['team1']<GAME_MAX_POINTS and self.team_scores['team2']<GAME_MAX_POINTS:
             self.play_round()
-
+        print(f"Game ended! {max(self.team_scores)} won!")
