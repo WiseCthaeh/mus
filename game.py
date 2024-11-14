@@ -3,7 +3,7 @@ import random
 
 PARES = ["AA","44","55","66","77","SS","CC","RR"]
 MEDIAS =["AAA","444","555","666","777","SSS","CCC","RRR"]
-
+GAME_MAX_POINTS = 40
 DUPLES = {str(i+j): k for k, (i, j) in enumerate((x, y) for x in PARES for y in PARES if PARES.index(x) <= PARES.index(y))}
 # print(DUPLES.keys())
 
@@ -111,6 +111,7 @@ class Game():
         self.deck = Deck(full=True)
         self.team_scores = {"team1":0, "team2":0}
         self.mano_index = 0
+        self.round = 1
 
     def deal(self, player,n=1):
         for _ in range(n):
@@ -206,23 +207,6 @@ class Game():
                             betting_team = player.team
                             break
 
-
-
-    def evalute_winner(self, stage, bet_made, winning_team, current_bet):
-        if winning_team == None:
-        # These two lines deal with either an accepted bet or a stage that is not bet on,
-        # Both scenarios
-            if bet_made != 0:
-                print('Compute which team wins the bet')
-                pass
-            else:
-                print('Compute which team wins (was left al paso)')
-                pass
-        else:
-            # Here a team has won the round, compute points and add to team scores
-            pass
-            #
-
     def offer_mus(self):
         mus_order_players = [self.players[(0+self.mano_index)%4], 
                              self.players[(2+self.mano_index)%4], 
@@ -262,11 +246,14 @@ class Game():
                             for player in mus_order_players)
     
     def game_info(self):
+        print("********** SCORES **********")
+        print(f"Team 1: {self.team_scores['team1']} | Team 2: {self.team_scores['team2']} | Round: {self.round}")
         for player in self.players:
             print(player.name, player.show_hand(), player.has_pares, player.pares,player.has_juego, player.juego)
 
     def rotate_mano(self):
         self.mano_index = (self.mano_index + 1)%4
+        self.round += 1
 
     def play_round(self):
         self.deck.shuffle()
@@ -274,18 +261,222 @@ class Game():
         self.game_info()
         # This is where self.offermus() goes
         self.offer_mus()
+
         stages = ['grande', 'chica', 'pares', 'juego']
         stages_log = []
         for stage in stages:
             stage_data = []
             bet_made, winning_team, current_bet = self.betting_round(stage)
-            print(stage, bet_made, winning_team, current_bet)
+            if winning_team is None:
+                if bet_made is False:
+                    winning_team = self.find_winner(stage)
+                    current_bet = 1
+                else:
+                    winning_team = self.find_winner(stage)
+                self.compute_points(stage, winning_team, current_bet)
+            else:
+                self.compute_points(stage, winning_team,current_bet)
 
-
-            
-            # self.evalute_winner(bet_made, winning_team, current_bet)
         self.clear_round()
         self.rotate_mano()
+
+    def find_winner(self, stage):
+        if stage=='grande':
+            best_player = None
+            best_hand_ranks = []
+
+            # Get number of players to handle wrapping around from "mano"
+            num_players = len(self.players)
+
+            # Start from "mano" and go through players in turn order
+            for i in range(num_players):
+                player = self.players[(self.mano_index + i) % num_players]  # Starting from "mano" and wrap around
+
+                # Get the sorted hand ranks for the player in descending order
+                player_hand_ranks = sorted(
+                    [player.sort_hand_values[card.rank] for card in player.hand],
+                    reverse=True
+                )
+
+                # Compare this player's hand with the current best hand
+                if player_hand_ranks > best_hand_ranks:
+                    best_hand_ranks = player_hand_ranks
+                    best_player = player
+                elif player_hand_ranks == best_hand_ranks:
+                    # If there's a tie, choose the player closest to "mano"
+                    current_best_distance = (self.players.index(best_player) - self.mano_index) % num_players
+                    current_player_distance = i
+                    if current_player_distance < current_best_distance:
+                        best_player = player
+
+            # Return the team of the player with the best hand
+            if best_player:
+                print(f"The best hand for 'grande' belongs to {best_player.name} from team {best_player.team}")
+                winning_team = best_player.team
+            else:
+                print("No player with the best hand found")
+                return None
+        
+        if stage=='chica':
+            best_player = None
+            best_hand_ranks = [float('inf')] * 4  # Initialize to a high value for "lowest" comparison
+            
+            # Get number of players to handle wrapping around from "mano"
+            num_players = len(self.players)
+
+            # Start from "mano" and go through players in turn order
+            for i in range(num_players):
+                player = self.players[(self.mano_index + i) % 4]  # Start from "mano" and wrap around
+
+                # Get the sorted hand ranks for the player in ascending order
+                player_hand_ranks = sorted(
+                    [player.sort_hand_values[card.rank] for card in player.hand]
+                )
+
+                # Compare this player's hand with the current best hand for "chica"
+                if player_hand_ranks < best_hand_ranks:
+                    best_hand_ranks = player_hand_ranks
+                    best_player = player
+                elif player_hand_ranks == best_hand_ranks:
+                    # If there's a tie, choose the player closest to "mano"
+                    current_best_distance = (self.players.index(best_player) - self.mano_index) % num_players
+                    current_player_distance = i
+                    if current_player_distance < current_best_distance:
+                        best_player = player
+
+            # Return the team of the player with the best "chica" hand
+            if best_player:
+                print(f"The best hand for 'chica' belongs to {best_player.name} from team {best_player.team}")
+                winning_team = best_player.team
+            else:
+                print("No player with the best hand found")
+                return None
+
+        if stage=='pares':
+            active_players = [player for player in self.players if player.has_pares]
+            if len(active_players)==1:
+                    winning_team = active_players[0].team
+            else:
+                best_player = None
+                best_pares_strength = -1  # Initialize to a low value
+
+                # Start from "mano" and go through players in turn order
+                for i in range(4):
+                    player = self.players[(self.mano_index + i) % 4]  # Starting from "mano" and wrap around
+
+                    # Compare player's pares_strength with the best so far
+                    if player.pares_strength > best_pares_strength:
+                        best_pares_strength = player.pares_strength
+                        best_player = player
+                    elif player.pares_strength == best_pares_strength:
+                        # Tie-breaking: player closest to "mano" wins
+                        current_best_distance = (self.players.index(best_player) - self.mano_index) % 4
+                        current_player_distance = i
+                        if current_player_distance < current_best_distance:
+                            best_player = player
+
+                # Return the team of the player with the highest pares_strength
+                if best_player:
+                    print(f"The best 'pares' hand belongs to {best_player.name} from team {best_player.team} with pares strength {best_pares_strength}")
+                    winning_team = best_player.team
+                else:
+                    print("No player with the best pares strength found")
+                    return None
+
+        if stage=='juego':
+            # This is for computing who is closest to 30 for punto
+            if all(player.has_juego==False for player in self.players):
+                best_player = None
+                best_total_below_31 = -1  # Initialize to a low value
+                num_players = len(self.players)
+
+                # Loop through players starting from "mano" position
+                for i in range(num_players):
+                    player = self.players[(self.mano_index + i) % num_players]  # Wrap around from "mano"
+
+                    # Calculate the total hand value
+                    hand_total = player.juego
+
+                    # Only consider hands below 31, since no one has "juego"
+                    if hand_total < 31:
+                        # Compare the hand total with the current best below 31
+                        if hand_total > best_total_below_31:
+                            best_total_below_31 = hand_total
+                            best_player = player
+                        elif hand_total == best_total_below_31:
+                            # Tie-breaking: player closest to "mano" wins
+                            current_best_distance = (self.players.index(best_player) - self.mano) % num_players
+                            current_player_distance = i
+                            if current_player_distance < current_best_distance:
+                                best_player = player
+
+                # Return the team of the player with the best "punto" hand (highest hand below 31)
+                if best_player:
+                    print(f"The best 'punto' hand belongs to {best_player.name} from team {best_player.team} with hand total {best_total_below_31}")
+                    return best_player.team
+                else:
+                    print("No player with a valid 'punto' hand found")
+                    return None
+            
+            # This is for computing who is the strongest juego
+            else:
+                juego_priority = [JUEGO_PUNTOS.keys()]
+                best_player = None
+                best_juego_value = -1  # Initialize to a low value
+                best_juego_priority = float('inf')  # Initialize to a high priority (31 is best)
+
+                num_players = len(self.players)
+
+                # Loop through players starting from "mano" position
+                for i in range(num_players):
+                    player = self.players[(self.mano_index + i) % num_players]  # Wrap around from "mano"
+
+                    # Calculate the total hand value
+                    hand_total = player.juego
+
+                    # Only consider hands of 31 or more
+                    if hand_total >= 31 and hand_total in juego_priority:
+                        # Determine the priority of this "juego" value
+                        current_priority = juego_priority.index(hand_total)
+
+                        # Compare with the current best priority
+                        if current_priority < best_juego_priority:
+                            best_juego_priority = current_priority
+                            best_juego_value = hand_total
+                            best_player = player
+                        elif current_priority == best_juego_priority:
+                            # Tie-breaking: player closest to "mano" wins
+                            current_best_distance = (self.players.index(best_player) - self.mano_index) % num_players
+                            current_player_distance = i
+                            if current_player_distance < current_best_distance:
+                                best_player = player
+
+                # Return the team of the player with the best "juego" hand
+                if best_player:
+                    print(f"The best 'juego' hand belongs to {best_player.name} from team {best_player.team} with a total of {best_juego_value}")
+                    winning_team = best_player.team
+
+        return winning_team
+    
+    def compute_points(self, stage, winning_team, current_bet):
+        if stage=='grande' or stage=='chica':
+            self.team_scores[winning_team] += current_bet
+
+        if stage=='pares':
+            for player in self.players:
+                if player.team==winning_team and player.has_pares:
+                    self.team_scores[winning_team] += PARES_PUNTOS[PARES_DICT[player.pares]]
+            if len([player for player in self.players if player.has_pares==False])==4:
+                current_bet = 0
+            self.team_scores[winning_team] += current_bet
+
+        if stage=='juego':
+            for player in self.players:
+                if player.team==winning_team and player.has_juego:
+                    self.team_scores[winning_team] += JUEGO_PUNTOS[player.juego]
+            if len([player for player in self.players if player.has_juego==False])==4:
+                current_bet +=1
+            self.team_scores[winning_team] += current_bet
 
     def clear_round(self):
         for player in self.players:
@@ -299,6 +490,6 @@ class Game():
         self.deck = Deck(full=True)
 
     def play_game(self):
-        self.play_round()
-        self.play_round()
+        while self.team_scores['team1']<GAME_MAX_POINTS and self.team_scores['team2']<GAME_MAX_POINTS:
+            self.play_round()
 
