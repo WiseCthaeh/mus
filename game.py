@@ -436,7 +436,7 @@ class Game():
 
             # This is for computing who is the strongest juego
             else:
-                juego_priority = list(JUEGO_PUNTOS.keys())
+                juego_priority = [31, 32, 40, 37, 36, 35, 34, 33]
                 best_player = None
                 best_priority_index = float('inf')  # Initialize to a high priority (31 is best)
 
